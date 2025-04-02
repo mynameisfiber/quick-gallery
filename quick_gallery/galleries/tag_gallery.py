@@ -1,10 +1,8 @@
 import logging
 from collections import Counter, abc
-import mimetypes
 
 from ..media import Media
 from .base_gallery import BaseGallery
-
 
 logger = logging.getLogger(__name__)
 

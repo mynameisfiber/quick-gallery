@@ -1,15 +1,14 @@
-import sys
-import os
 import hashlib
-from pathlib import Path
+import os
+import sys
 from collections import abc
+from pathlib import Path
 
 import click
 
 from . import galleries
-from .server import AioHttpServer
 from .media import Media
-
+from .server import AioHttpServer
 
 GALLERY_LOOKUP = {g.name: g for g in galleries.galleries}
 

@@ -1,6 +1,5 @@
-from pathlib import Path
 import mimetypes
-
+from pathlib import Path
 
 mimetypes.add_type("image/jfif", ".jfif", strict=False)
 

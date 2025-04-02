@@ -1,11 +1,10 @@
-from collections import abc
 import logging
+from collections import abc
 
 from aiohttp import web
 
-from .media import Media
 from .galleries import BaseGallery
-
+from .media import Media
 
 logger = logging.getLogger(__name__)
 
