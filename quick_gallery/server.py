@@ -1,11 +1,10 @@
 from collections import abc
 import logging
-import asyncio
-import os
 
 from aiohttp import web
 
 from .media import Media
+from .galleries import BaseGallery
 
 
 logger = logging.getLogger(__name__)
@@ -13,11 +12,12 @@ logger = logging.getLogger(__name__)
 
 class AioHttpServer:
     def __init__(
-        self, host: str, port: int, root_html: str, medias: abc.Iterable[Media]
+        self, host: str, port: int, gallery: BaseGallery, medias: abc.Iterable[Media]
     ):
         self.host = host
         self.port = port
-        self.root_html = root_html
+        self.gallery = gallery
+        self.gallery_html = gallery.html()
         self.media_lookup: dict[str, Media] = {
             self.media_path(media): media for media in medias
         }
@@ -32,7 +32,7 @@ class AioHttpServer:
         return str("/" / media.public_file)
 
     async def handle_root(self, request):
-        return web.Response(text=self.root_html, content_type="text/html")
+        return web.Response(text=self.gallery_html, content_type="text/html")
 
     async def handle_static(self, request):
         media = self.media_lookup.get(request.path)

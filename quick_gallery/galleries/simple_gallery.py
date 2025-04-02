@@ -1,30 +1,43 @@
-import sys
+import logging
 from collections import Counter, abc
 import mimetypes
 
-from .media import Media
+from ..media import Media
+from .base_gallery import BaseGallery
 
 
-def generate_gallery(medias: abc.Iterable[Media], log=sys.stderr):
+logger = logging.getLogger(__name__)
+
+
+class SimpleGallery(BaseGallery):
     valid_types = {"image", "video", "audio"}
-    mimetypes_count = Counter()
-    gallery_items = []
 
-    for media in medias:
-        mimetype = media.mimetype()
-        if not mimetype:
-            print(f"No mimetype for file: {media=}, {mimetype=}", file=log)
-            continue
-        file_type = media.media_type()
-        if file_type in valid_types:
-            mimetypes_count[mimetype] += 1
-            gallery_items.append(
-                f'<span class="media-container" data-src="{media.public_file}" data-mimetype="{mimetype}"></span>'
-            )
-    print(f"Found mime-types: {mimetypes_count.most_common(None)}", file=log)
+    def __init__(self, medias: abc.Iterable[Media]):
+        super().__init__(medias)
+        mimetypes_count = Counter()
+        self.gallery_items = []
 
-    html_content = (
-        """<!DOCTYPE html>
+        for media in medias:
+            mimetype = media.mimetype()
+            if not mimetype:
+                logger.debug(f"No mimetype for file: {media=}, {mimetype=}")
+                continue
+            file_type = media.media_type()
+            if file_type in self.valid_types:
+                mimetypes_count[mimetype] += 1
+                self.gallery_items.append(
+                    f'<span class="media-container" data-src="{media.public_file}" data-mimetype="{mimetype}"></span>'
+                )
+        logger.info(f"Found mime-types: {mimetypes_count.most_common(None)}")
+
+    def html(self):
+        return SIMPLE_GALLERY_HTML.replace(
+            "{GALLERY_ITEMS}", "\n".join(self.gallery_items)
+        )
+
+
+SIMPLE_GALLERY_HTML = """
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -47,7 +60,9 @@ width: 75%; max-width: 1000px;
         }
     </style>
     <script>
+        console.log("Loading gallery");
         document.addEventListener("DOMContentLoaded", function() {
+            console.log("Loaded");
             const gallery = document.querySelector(".gallery");
             let currentIndex = 0;
             let startMuted = true;
@@ -179,6 +194,9 @@ width: 75%; max-width: 1000px;
             document.getElementById("randomize").addEventListener("click", function() {
                 shuffleContent();
             });
+
+            loadMedia(0);
+            console.log("Gallery initialized");
         });
     </script>
 </head>
@@ -189,17 +207,8 @@ width: 75%; max-width: 1000px;
         <input type="number" id="slideshow-delay" placeholder="Delay (s)" value="3">
         <button id="toggle-slideshow">▶</button>
     </div>
-    <div class="gallery">"""
-        + "".join(gallery_items)
-        + """</div>
+    <div class="gallery">
+        {GALLERY_ITEMS}
 </body>
 </html>
-    """
-    )
-
-    return html_content
-
-
-if __name__ == "__main__":
-    file_paths = sys.stdin.readlines()
-    print(generate_gallery(file_paths))
+"""

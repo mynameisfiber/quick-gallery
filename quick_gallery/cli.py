@@ -1,15 +1,17 @@
 import sys
 import os
-import asyncio
 import hashlib
 from pathlib import Path
 from collections import abc
 
 import click
 
-from .create_gallery import generate_gallery
+from . import galleries
 from .server import AioHttpServer
 from .media import Media
+
+
+GALLERY_LOOKUP = {g.name: g for g in galleries.galleries}
 
 
 def resolve_files(
@@ -38,15 +40,22 @@ def cli():
 @click.option("--recursive", is_flag=True, default=False)
 @click.option("--output", type=click.File(mode="wt+"), default="-")
 @click.option("--debug", is_flag=True, default=False)
+@click.option(
+    "--gallery",
+    "gallery_name",
+    type=click.Choice(list(GALLERY_LOOKUP.keys()), case_sensitive=False),
+    default=galleries.default_gallery.name,
+)
 @click.argument("media", type=click.Path(path_type=Path, allow_dash=True), nargs=-1)
-def static(recursive, output, media, debug):
+def static(recursive, gallery_name, output, media, debug):
     if debug:
         logfile = sys.stderr
     else:
         logfile = open(os.devnull, "w")
     medias = resolve_files(media, recursive=recursive)
-    gallery = generate_gallery(medias, log=logfile)
-    output.write(gallery)
+    GalleryType = GALLERY_LOOKUP[gallery_name]
+    gallery = GalleryType(medias)
+    output.write(gallery.html())
 
 
 @cli.command()
@@ -54,8 +63,14 @@ def static(recursive, output, media, debug):
 @click.option("--port", type=int, default=8000)
 @click.option("--recursive", is_flag=True, default=False)
 @click.option("--debug", is_flag=True, default=False)
+@click.option(
+    "--gallery",
+    "gallery_name",
+    type=click.Choice(list(GALLERY_LOOKUP.keys()), case_sensitive=False),
+    default=galleries.default_gallery.name,
+)
 @click.argument("media", type=click.Path(path_type=Path, allow_dash=True), nargs=-1)
-def serve(host, port, recursive, media, debug):
+def serve(host, port, gallery_name, recursive, media, debug):
     if debug:
         logfile = sys.stderr
     else:
@@ -68,7 +83,8 @@ def serve(host, port, recursive, media, debug):
             + hashlib.md5(str(p).encode("utf8")).hexdigest(),
         )
     )
-    gallery = generate_gallery(medias, log=logfile)
+    GalleryType = GALLERY_LOOKUP[gallery_name]
+    gallery = GalleryType(medias)
     server = AioHttpServer(host, port, gallery, medias)
     server.start()
 
