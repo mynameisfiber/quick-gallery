@@ -1,5 +1,5 @@
 import hashlib
-import os
+import logging
 import sys
 from collections import abc
 from pathlib import Path
@@ -11,6 +11,7 @@ from .media import Media
 from .server import AioHttpServer
 
 GALLERY_LOOKUP = {g.name: g for g in galleries.galleries}
+logger = logging.getLogger(__name__)
 
 
 def resolve_files(
@@ -31,14 +32,24 @@ def resolve_files(
 
 
 @click.group()
-def cli():
-    pass
+@click.option("--debug", is_flag=True, default=False)
+@click.option("--silent", is_flag=True, default=False)
+def cli(debug, silent):
+    if debug:
+        level = logging.DEBUG
+    elif silent:
+        level = logging.ERROR
+    else:
+        level = logging.INFO
+    logging.basicConfig(
+        format="[%(asctime)s][%(levelname)s][%(name)s] %(message)s",
+        level=level,
+    )
 
 
 @cli.command()
 @click.option("--recursive", is_flag=True, default=False)
 @click.option("--output", type=click.File(mode="wt+"), default="-")
-@click.option("--debug", is_flag=True, default=False)
 @click.option(
     "--gallery",
     "gallery_name",
@@ -46,11 +57,7 @@ def cli():
     default=galleries.default_gallery.name,
 )
 @click.argument("media", type=click.Path(path_type=Path, allow_dash=True), nargs=-1)
-def static(recursive, gallery_name, output, media, debug):
-    if debug:
-        logfile = sys.stderr
-    else:
-        logfile = open(os.devnull, "w")
+def static(recursive, gallery_name, output, media):
     medias = resolve_files(media, recursive=recursive)
     GalleryType = GALLERY_LOOKUP[gallery_name]
     gallery = GalleryType(medias)
@@ -61,7 +68,6 @@ def static(recursive, gallery_name, output, media, debug):
 @click.option("--host", default="0.0.0.0")
 @click.option("--port", type=int, default=8000)
 @click.option("--recursive", is_flag=True, default=False)
-@click.option("--debug", is_flag=True, default=False)
 @click.option(
     "--gallery",
     "gallery_name",
@@ -69,11 +75,7 @@ def static(recursive, gallery_name, output, media, debug):
     default=galleries.default_gallery.name,
 )
 @click.argument("media", type=click.Path(path_type=Path, allow_dash=True), nargs=-1)
-def serve(host, port, gallery_name, recursive, media, debug):
-    if debug:
-        logfile = sys.stderr
-    else:
-        logfile = open(os.devnull, "w")
+def serve(host, port, gallery_name, recursive, media):
     medias = list(
         resolve_files(
             media,
@@ -82,6 +84,7 @@ def serve(host, port, gallery_name, recursive, media, debug):
             + hashlib.md5(str(p).encode("utf8")).hexdigest(),
         )
     )
+    logger.debug("Resolved %d medias", len(medias))
     GalleryType = GALLERY_LOOKUP[gallery_name]
     gallery = GalleryType(medias)
     server = AioHttpServer(host, port, gallery, medias)

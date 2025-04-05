@@ -107,6 +107,11 @@ width: 75%; max-width: 1000px;
                     }
                 }
             }
+
+            function unloadMedia(index) {
+                const container = mediaContainers()[index];
+                container.innerHTML = null;
+            }
             
             function updateCurrentIndex(index) {
                 const media = mediaContainers();
@@ -167,12 +172,16 @@ width: 75%; max-width: 1000px;
                             media.play();
                             currentPlaying = media;
                         }
-                    } else if (media && media === currentPlaying) {
-                        media.pause();
-                        currentPlaying = null;
+                    } else {
+                        if (media && media === currentPlaying) {
+                            media.pause();
+                            currentPlaying = null;
+                        }
+                        unloadMedia(index);
+
                     }
                 });
-            }, { threshold: 0.05 });
+            });
             
             mediaContainers().forEach(container => observer.observe(container));
             

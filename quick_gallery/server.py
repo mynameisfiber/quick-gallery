@@ -36,9 +36,8 @@ class AioHttpServer:
     async def handle_static(self, request):
         media = self.media_lookup.get(request.path)
         if media and media.is_file():
-            print(f"Request for media {request.path}")
             return web.FileResponse(media)
         return web.Response(status=404, text="404: Not Found")
 
     def start(self):
-        web.run_app(self.app, host=self.host, port=self.port)
+        web.run_app(self.app, host=self.host, port=self.port, print=logger.info)
