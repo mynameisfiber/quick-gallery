@@ -84,6 +84,7 @@ def serve(host, port, gallery_name, recursive, media):
             + hashlib.md5(str(p).encode("utf8")).hexdigest(),
         )
     )
+    medias.sort()
     logger.debug("Resolved %d medias", len(medias))
     GalleryType = GALLERY_LOOKUP[gallery_name]
     gallery = GalleryType(medias)
